@@ -82,7 +82,7 @@ img {
 </div>
 <div id="goal" class="section level1">
 <h1>Goal</h1>
-<p>The goal of this project is to predict the manner in which did the exercise. This is the “classe” variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.</p>
+<p>The goal of this project is to predict the manner in which did the exercise.</p>
 </div>
 <div id="data-analysis" class="section level1">
 <h1>Data Analysis</h1>
@@ -90,6 +90,15 @@ img {
 train &lt;- read.table(&quot;pml-training.csv&quot;, header=T, sep=&quot;,&quot;);
 dim(train);</code></pre>
 <pre><code>## [1] 19622   160</code></pre>
+<p>By taking a look at the dataset, we can make the following comments:</p>
+<ul>
+<li><p>There is a lack of information about the features. This would greatly help the analysis.</p></li>
+<li><p>There seems to be a boolean feature, <code>new window</code>, which most of the time is <code>false</code>. In this case, several features (67 out of 160) are <code>NA</code>. The few times it is <code>true</code> (406 out of 19622), these other features have some values. Since at a first glance this feature does not has a great impact in predicting the type of activity, we can remove all the features which have <code>NA</code> values.</p></li>
+</ul>
+<pre class="r"><code>length(colnames(train)[colSums(is.na(train)) &gt; 0]);</code></pre>
+<pre><code>## [1] 67</code></pre>
+<pre class="r"><code>train &lt;- train[colSums(is.na(train)) == 0];</code></pre>
+<p>By doing a <code>str(train)</code>, we can also notice that there are several variables with a few set of different values. <code>R</code> detects them as <em>factor</em> variables.</p>
 </div>
 
 

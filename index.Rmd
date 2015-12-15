@@ -24,8 +24,7 @@ The data for this project come from this source: [http://groupware.les.inf.puc-r
 
 # Goal
 
-The goal of this project is to predict the manner in which  did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases. 
-
+The goal of this project is to predict the manner in which  did the exercise.
 
 # Data Analysis
 
@@ -36,4 +35,15 @@ train <- read.table("pml-training.csv", header=T, sep=",");
 dim(train);
 ```
 
+By taking a look at the dataset, we can make the following comments:
 
+* There is a lack of information about the features. This would greatly help the analysis.
+
+* There seems to be a boolean feature, `new window`, which most of the time is `false`. In this case, several features (67 out of 160) are `NA`. The few times it is `true` (406 out of 19622), these other features have some values. Since at a first glance this feature does not has a great impact in predicting the type of activity, we can remove all the features which have `NA` values.
+
+```{r}
+length(colnames(train)[colSums(is.na(train)) > 0]);
+train <- train[colSums(is.na(train)) == 0];
+```
+
+By doing a `str(train)`, we can also notice that there are several variables with a few set of different values. `R` detects them as *factor* variables.
