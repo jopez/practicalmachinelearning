@@ -84,21 +84,39 @@ img {
 <h1>Goal</h1>
 <p>The goal of this project is to predict the manner in which did the exercise.</p>
 </div>
-<div id="data-analysis" class="section level1">
-<h1>Data Analysis</h1>
+<div id="data-analysis-preprocessing" class="section level1">
+<h1>Data Analysis / Preprocessing</h1>
 <pre class="r"><code>setwd(&quot;C:/Users/jpablo/Work/projects/ML/courses/repo/practicalmachinelearning&quot;)
-train &lt;- read.table(&quot;pml-training.csv&quot;, header=T, sep=&quot;,&quot;);
+train &lt;- read.csv(&quot;pml-training.csv&quot;, header=T, sep=&quot;,&quot;);
 dim(train);</code></pre>
 <pre><code>## [1] 19622   160</code></pre>
-<p>By taking a look at the dataset, we can make the following comments:</p>
+<p>By taking a look at the dataset, we can make the following comments and perform some cleanning on the dataset:</p>
 <ul>
 <li><p>There is a lack of information about the features. This would greatly help the analysis.</p></li>
 <li><p>There seems to be a boolean feature, <code>new window</code>, which most of the time is <code>false</code>. In this case, several features (67 out of 160) are <code>NA</code>. The few times it is <code>true</code> (406 out of 19622), these other features have some values. Since at a first glance this feature does not has a great impact in predicting the type of activity, we can remove all the features which have <code>NA</code> values.</p></li>
 </ul>
-<pre class="r"><code>length(colnames(train)[colSums(is.na(train)) &gt; 0]);</code></pre>
+<pre class="r"><code>length(colnames(train)[colSums(is.na(train)) &gt; dim(train)[1]/2]);</code></pre>
 <pre><code>## [1] 67</code></pre>
-<pre class="r"><code>train &lt;- train[colSums(is.na(train)) == 0];</code></pre>
-<p>By doing a <code>str(train)</code>, we can also notice that there are several variables with a few set of different values. <code>R</code> detects them as <em>factor</em> variables.</p>
+<pre class="r"><code>train &lt;- train[colSums(is.na(train)) &lt;= dim(train)[1]/2];</code></pre>
+<ul>
+<li>Timestamps are useless (in this case) to predict the type of activity. We can remove such features.</li>
+</ul>
+<pre class="r"><code>train &lt;- subset(train,select=-c(raw_timestamp_part_1,raw_timestamp_part_2,cvtd_timestamp))</code></pre>
+<ul>
+<li>The first column is just an enumeration.</li>
+</ul>
+<pre class="r"><code>train &lt;- subset(train,select=-c(X))</code></pre>
+<ul>
+<li>The <code>user name</code> is not useful to predict the type of activity (We will need to do the same preprocessing on the test set).</li>
+</ul>
+<pre class="r"><code>train &lt;- subset(train,select=-c(user_name))</code></pre>
+<ul>
+<li>We can delete the features which have mostly blank values.</li>
+</ul>
+<pre class="r"><code>train &lt;- train[sapply(train, function(x) sum(x==&quot;&quot;) &lt;= dim(train)[1]/2)]</code></pre>
+<p>We now have a clean training set that we can use to train our predictor.</p>
+<pre class="r"><code>dim(train)</code></pre>
+<pre><code>## [1] 19622    55</code></pre>
 </div>
 
 
