@@ -90,33 +90,55 @@ img {
 train &lt;- read.csv(&quot;pml-training.csv&quot;, header=T, sep=&quot;,&quot;);
 dim(train);</code></pre>
 <pre><code>## [1] 19622   160</code></pre>
-<p>By taking a look at the dataset, we can make the following comments and perform some cleanning on the dataset:</p>
+<p>By taking a look at the dataset, we can make the following comments and perform some cleanning/removal of features:</p>
 <ul>
 <li><p>There is a lack of information about the features. This would greatly help the analysis.</p></li>
-<li><p>There seems to be a boolean feature, <code>new window</code>, which most of the time is <code>false</code>. In this case, several features (67 out of 160) are <code>NA</code>. The few times it is <code>true</code> (406 out of 19622), these other features have some values. Since at a first glance this feature does not has a great impact in predicting the type of activity, we can remove all the features which have <code>NA</code> values.</p></li>
+<li><p>There seems to be a boolean feature, <code>new window</code>, which most of the time is <code>false</code>. In this case, several features (67 out of 160) are <code>NA</code>. The few times it is <code>true</code> (406 out of 19622), and only when this is the case, those 67 features have some values. Since at a first glance this feature does not has a great impact in predicting the type of activity, we can remove the features which have mostly <code>NA</code> values.</p></li>
+<li><p>Timestamps are useless (in this case) to predict the type of activity. We can remove such features (unless there is information about people’s schedules for doing the activities).</p></li>
+<li><p>The first column (<code>X</code>) is just an enumeration. We can also remove it.</p></li>
+<li><p>The <code>user name</code> is not useful to predict the type of activity (We will need to do the same preprocessing on the test set).???</p></li>
+<li><p>We can delete the features which have mostly blank values (filling with the mean or nearest neighbor does not seem useful for cases where there are a lot of missing data).</p></li>
 </ul>
-<pre class="r"><code>length(colnames(train)[colSums(is.na(train)) &gt; dim(train)[1]/2]);</code></pre>
-<pre><code>## [1] 67</code></pre>
-<pre class="r"><code>train &lt;- train[colSums(is.na(train)) &lt;= dim(train)[1]/2];</code></pre>
-<ul>
-<li>Timestamps are useless (in this case) to predict the type of activity. We can remove such features.</li>
-</ul>
-<pre class="r"><code>train &lt;- subset(train,select=-c(raw_timestamp_part_1,raw_timestamp_part_2,cvtd_timestamp))</code></pre>
-<ul>
-<li>The first column is just an enumeration.</li>
-</ul>
-<pre class="r"><code>train &lt;- subset(train,select=-c(X))</code></pre>
-<ul>
-<li>The <code>user name</code> is not useful to predict the type of activity (We will need to do the same preprocessing on the test set).</li>
-</ul>
-<pre class="r"><code>train &lt;- subset(train,select=-c(user_name))</code></pre>
-<ul>
-<li>We can delete the features which have mostly blank values.</li>
-</ul>
-<pre class="r"><code>train &lt;- train[sapply(train, function(x) sum(x==&quot;&quot;) &lt;= dim(train)[1]/2)]</code></pre>
+</div>
+<div id="user_name" class="section level1">
+<h1>“user_name”);</h1>
+<pre class="r"><code>to_delete &lt;- c(&quot;raw_timestamp_part_1&quot;,
+               &quot;raw_timestamp_part_2&quot;,
+               &quot;cvtd_timestamp&quot;,
+               &quot;X&quot;);
+to_delete &lt;- c(to_delete,colnames(train[colSums(is.na(train)) &gt; dim(train)[1]/2]));
+to_delete &lt;- c(to_delete,colnames(train[sapply(train, function(x) (sum(x==&quot;&quot;, na.rm = TRUE) &gt; length(x)/2))]))
+
+train &lt;- train[,!names(train) %in% to_delete]
+dim(train)</code></pre>
+<pre><code>## [1] 19622    56</code></pre>
 <p>We now have a clean training set that we can use to train our predictor.</p>
-<pre class="r"><code>dim(train)</code></pre>
-<pre><code>## [1] 19622    55</code></pre>
+<!--
+
+length(colnames(train)[colSums(is.na(train)) > dim(train)[1]/2]);
+train <- train[colSums(is.na(train)) <= dim(train)[1]/2];
+
+* Timestamps are useless (in this case) to predict the type of activity. We can remove such features.
+
+train <- subset(train,select=-c(raw_timestamp_part_1,raw_timestamp_part_2,cvtd_timestamp))
+
+* The first column is just an enumeration.
+
+train <- subset(train,select=-c(X))
+
+* The `user name` is not useful to predict the type of activity (We will need to do the same preprocessing on the test set).
+
+train <- subset(train,select=-c(user_name))
+
+* We can delete the features which have mostly blank values.
+
+train <- train[sapply(train, function(x) sum(x=="") <= dim(train)[1]/2)]
+
+We now have a clean training set that we can use to train our predictor.
+
+dim(train)
+```
+-->
 </div>
 
 
