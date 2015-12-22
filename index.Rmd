@@ -12,6 +12,7 @@ One thing that people regularly do is quantify how much of a particular activity
 In this, we use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website [here](http://groupware.les.inf.puc-rio.br/har) (see the section on the Weight Lifting Exercise Dataset). 
 
 # Data
+
 The training data for this project are available here: 
 
 [https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv)
@@ -28,9 +29,13 @@ The goal of this project is to predict the manner in which  did the exercise.
 
 # Data Analysis / Preprocessing
 
+<!-- setwd("C:/Users/jpablo/Work/projects/ML/courses/repo/practicalmachinelearning")
+train <- train[sample(nrow(train), 800), ]
+-->
 
 ```{r}
-setwd("C:/Users/jpablo/Work/projects/ML/courses/repo/practicalmachinelearning")
+setwd("/media/jopez/FD26-9473/courses/datascientistspec/repo/practicalmachinelearning");
+set.seed(777);
 train <- read.csv("pml-training.csv", header=T, sep=",");
 dim(train);
 ```
@@ -45,18 +50,15 @@ By taking a look at the dataset, we can make the following comments and perform 
 
 * The first column (`X`) is just an enumeration. We can also remove it.
 
-* The `user name` is not useful to predict the type of activity (We will need to do the same preprocessing on the test set).???
-
 * We can delete the features which have mostly blank values (filling with the mean or nearest neighbor does not seem useful for cases where there are a lot of missing data).
 
-
-#               "user_name");
+* The `user name` could not be considered important when predicting the activity. However, since we do not know how the observations were sampled, it is better to consider it.
 
 ```{r}
 to_delete <- c("raw_timestamp_part_1",
                "raw_timestamp_part_2",
                "cvtd_timestamp",
-               "X");
+                "X");
 to_delete <- c(to_delete,colnames(train[colSums(is.na(train)) > dim(train)[1]/2]));
 to_delete <- c(to_delete,colnames(train[sapply(train, function(x) (sum(x=="", na.rm = TRUE) > length(x)/2))]))
 
@@ -64,8 +66,7 @@ train <- train[,!names(train) %in% to_delete]
 dim(train)
 ```
 
-We now have a clean training set that we can use to train our predictor.
-
+We now have a clean training set that we can use to train the predictor.
 
 <!--
 
@@ -96,4 +97,165 @@ dim(train)
 
 # Training the Predictor
 
+Let us train the predictor using a train, test and validation sets, so we can give some scores and plots to know how good or bad it is classifying the activities, as well as the expected out of the sample error.
 
+Since the dataset is large enough, we can use 70% to train and test the predictor, and the rest to validate it.
+
+We build our predictor as the combination of three models.
+
+```{r, cache=TRUE, message=FALSE, warning=FALSE}
+library(caret)
+library(doMC)
+
+registerDoMC(2);
+
+inBuild    <- createDataPartition(y=train$classe, p=0.7, list=FALSE);
+validation <- train[-inBuild,];
+buildData  <- train[inBuild,];
+
+inTrain  <- createDataPartition(y=buildData$classe, p=0.7, list=FALSE);
+training <- buildData[inTrain,];
+testing  <- buildData[-inTrain,];
+
+modFit1 <- train(classe~., data=training, method="rf",
+                trControl = trainControl(method = "cv", number=5),
+                tuneGrid = data.frame(mtry = 30),
+                allowParallel = TRUE);
+pred1   <- predict(modFit1, testing);
+
+modFit2 <- train(classe~., data=training, method="pda",
+                 allowParallel = TRUE); 
+pred2   <- predict(modFit2, testing);
+
+modFit3 <- train(classe~., data=training, method="RRF",
+                 allowParallel = TRUE); 
+pred3   <- predict(modFit3, testing);
+```
+
+Since we are using different predictors that we are going to combine, we can see how different they predict the activities, as well as their different accuracies.
+
+```{r, warning=FALSE, message=FALSE}
+library(caret)
+confusionMatrix(testing$classe, pred1)$overall['Accuracy'];
+confusionMatrix(testing$classe, pred2)$overall['Accuracy'];
+confusionMatrix(testing$classe, pred3)$overall['Accuracy'];
+```
+
+```{r fig.width=7, fig.height=4, fig.align='center'}
+qplot(pred1, pred2, colour = classe, data=testing, xlab="predictor 1", ylab="predictor 2", main="Different Predictors Classification (1)");
+qplot(pred2, pred3, colour = classe, data=testing, xlab="predictor 2", ylab="predictor 3", main="Different Predictors Classification (2)");
+```
+
+We now fit a model that combines the previous predictors.
+
+```{r, message=FALSE, warning=FALSE}
+predTDF <- data.frame(pred1, pred2, classe=testing$classe);
+modFit  <- train(classe~., method="rf", data=predTDF,
+                trControl = trainControl(method = "cv", number=5),
+                allowParallel = TRUE);
+
+predT   <- predict(modFit, predTDF);
+confusionMatrix(testing$classe, predT)$overall['Accuracy'];
+```
+
+<!--
+We can now see the reported scores.
+
+`d``{r}
+print(modFit);
+print(modFit$finalModel);
+`d``
+
+Finally, we can use the testing dataset to evaluate or predictor.
+
+`d``{r}
+pred              <- predict(modFit, testing);
+testing$predRight <- pred == testing$classe; 
+`d``
+
+The next table show how many activities were correctly and incorrectly classified.
+
+`d``{r}
+table(pred, testing$classe);
+confusionMatrix(pred, testing$classe);
+`d``
+
+The next figure represents graphically the correct and incorrectly classified activities.
+
+`d``{r fig.width=11, fig.height=9}
+library(ggplot2);
+qplot(rownames(testing), classe, colour=predRight, data=testing,  
+      main = "Predicted values");
+`d``
+
+-->
+
+# Expected Out of Sample Error
+
+We can use the validation dataset to compute the expected out of sample error of the final predictor.
+
+```{r, message=FALSE, warning=FALSE}
+pred1V  <- predict(modFit1, validation);
+pred2V  <- predict(modFit2, validation);
+pred3V  <- predict(modFit3, validation);
+
+predVDF  <- data.frame(pred1=pred1V, pred2=pred2V, pred3=pred3V);
+combPred <- predict(modFit, predVDF); 
+```
+
+The next table show how many activities were correctly and incorrectly classified, as well as the *expected out of sample error* (accuracy, specificit, pos pred value, etc. since these measures are based on the validation set).
+
+```{r}
+confusionMatrix(validation$classe, combPred);
+```
+
+Finally, the tnext figure represents graphically the correct and incorrectly classified activities (`TRUE` means correctly classified, and `FALSE` otherwise).
+
+```{r fig.width=25, fig.height=5, fig.align='center'}
+library(ggplot2);
+validation$predRight <- combPred == validation$classe; 
+qplot(rownames(validation), classe, colour=predRight, data=validation,
+      xlab = "observation",
+      main = "Predicted Activities");
+```
+
+<!--
+# Predicting Activities on the Test/Final Set
+
+Load the test dataset and clean as we did for the training one.
+
+`d``{r}
+test <- read.csv("pml-testing.csv", header=T, sep=",");
+dim(test);
+
+test <- test[,!names(test) %in% to_delete]
+dim(test);
+`d``
+
+Perform the predictions.
+
+`d``{r}
+pred1T  <- predict(modFit1, test);
+pred2T  <- predict(modFit2, test);
+pred3T  <- predict(modFit3, test);
+
+predTDF  <- data.frame(pred1=pred1T, pred2=pred2T, pred3=pred3T);
+pred <- predict(modFit, predTDF); 
+`d``
+
+The `20` predicted activities are:
+
+`d``{r}
+pred;
+`d``
+
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+
+pml_write_files(pred)
+-->
