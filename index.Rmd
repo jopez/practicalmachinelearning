@@ -103,7 +103,7 @@ Since the dataset is large enough, we can use 70% to train and test the predicto
 
 We build our predictor as the combination of three models.
 
-```{r, cache=TRUE, message=FALSE, warning=FALSE}
+```{r, cache=FALSE, message=FALSE, warning=FALSE}
 library(caret)
 library(doMC)
 
