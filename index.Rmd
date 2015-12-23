@@ -99,21 +99,20 @@ dim(train)
 
 Let us train the predictor using a train, test and validation sets, so we can give some scores and plots to know how good or bad it is classifying the activities, as well as the expected out of the sample error.
 
-Since the dataset is large enough, we can use 70% to train and test the predictor, and the rest to validate it.
+Since the dataset is large enough, we can use 70% to train and test the predictor, and the rest to validate it.  
 
 We build our predictor as the combination of three models.
 
-```{r, cache=FALSE, message=FALSE, warning=FALSE}
+```{r, cache=TRUE, message=FALSE, warning=FALSE}
 library(caret)
 library(doMC)
-
 registerDoMC(2);
 
-inBuild    <- createDataPartition(y=train$classe, p=0.7, list=FALSE);
+inBuild    <- createDataPartition(y=train$classe, p=0.70, list=FALSE);
 validation <- train[-inBuild,];
 buildData  <- train[inBuild,];
 
-inTrain  <- createDataPartition(y=buildData$classe, p=0.7, list=FALSE);
+inTrain  <- createDataPartition(y=buildData$classe, p=0.70, list=FALSE);
 training <- buildData[inTrain,];
 testing  <- buildData[-inTrain,];
 
@@ -219,35 +218,16 @@ qplot(rownames(validation), classe, colour=predRight, data=validation,
       main = "Predicted Activities");
 ```
 
-<!--
-# Predicting Activities on the Test/Final Set
-
-Load the test dataset and clean as we did for the training one.
-
-`d``{r}
+```{r, message=FALSE, results=FALSE, warning=FALSE, echo=FALSE}
 test <- read.csv("pml-testing.csv", header=T, sep=",");
-dim(test);
-
 test <- test[,!names(test) %in% to_delete]
-dim(test);
-`d``
 
-Perform the predictions.
-
-`d``{r}
 pred1T  <- predict(modFit1, test);
 pred2T  <- predict(modFit2, test);
 pred3T  <- predict(modFit3, test);
 
 predTDF  <- data.frame(pred1=pred1T, pred2=pred2T, pred3=pred3T);
 pred <- predict(modFit, predTDF); 
-`d``
-
-The `20` predicted activities are:
-
-`d``{r}
-pred;
-`d``
 
 pml_write_files = function(x){
   n = length(x)
@@ -257,5 +237,5 @@ pml_write_files = function(x){
   }
 }
 
-pml_write_files(pred)
--->
+pml_write_files(pred);
+```
